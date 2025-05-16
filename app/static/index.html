@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submission Monitor</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .in-progress { background: #fff3cd; }
+        .completed { background: #d4edda; }
+        .error { background: #f8d7da; }
+        .metrics {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        input {
+            padding: 8px;
+            width: 200px;
+        }
+        button {
+            padding: 8px 16px;
+            margin-left: 10px;
+        }
+        .log {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Submission Monitor</h2>
+    <div>
+        <input type="text" id="submissionId" placeholder="Enter submission ID">
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+    <div id="status" class="status">Not connected</div>
+    <div id="metrics" class="metrics"></div>
+    <div id="log" class="log"></div>
+
+    <script>
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 2000; // 2 seconds
+        const log = document.getElementById('log');
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML = `[${timestamp}] ${message}\n` + log.innerHTML;
+        }
+
+        function connect() {
+            const id = document.getElementById('submissionId').value;
+            if (!id) {
+                alert('Please enter a submission ID');
+                return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addLog('Already connected');
+                return;
+            }
+
+            const status = document.getElementById('status');
+            const metrics = document.getElementById('metrics');
+
+            // Use the current host for WebSocket connection
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/submissions/${id}/live`;
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                addLog('Connecting to WebSocket...');
+
+                ws.onopen = () => {
+                    reconnectAttempts = 0;
+                    status.textContent = 'Connected';
+                    status.className = 'status in-progress';
+                    addLog('Connected to WebSocket');
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Received:', data);  // Debug log
+                        addLog(`Received update: ${JSON.stringify(data, null, 2)}`);
+                        
+                        if (data.status === 'connected') {
+                            addLog(data.message);
+                            return;
+                        }
+
+                        status.textContent = `Status: ${data.status}`;
+                        status.className = `status ${data.status}`;
+
+                        if (data.data) {
+                            metrics.innerHTML = `
+Submission ID: ${data.data.id}
+Status: ${data.data.status}
+Result: ${data.data.result || 'Pending'}
+Execution Time: ${data.data.execution_time || 0}ms
+Memory Usage: ${data.data.memory_usage || 0}KB
+Created At: ${new Date(data.data.created_at).toLocaleString()}
+Updated At: ${new Date(data.data.updated_at).toLocaleString()}
+                            `;
+                        }
+
+                        if (data.error) {
+                            metrics.innerHTML += `\nError: ${data.error}`;
+                            addLog(`Error: ${data.error}`);
+                        }
+                    } catch (e) {
+                        addLog(`Error processing message: ${e.message}`);
+                    }
+                };
+
+                ws.onclose = (event) => {
+                    status.textContent = 'Disconnected';
+                    status.className = 'status';
+                    addLog(`WebSocket closed (code: ${event.code}, reason: ${event.reason || 'No reason provided'})`);
+
+                    // Attempt to reconnect if not closed normally
+                    if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        addLog(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+                        setTimeout(connect, reconnectDelay);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    status.textContent = 'Error: Connection failed';
+                    status.className = 'status error';
+                    addLog(`WebSocket error occurred`);
+                };
+            } catch (e) {
+                addLog(`Error creating WebSocket: ${e.message}`);
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close(1000, "User disconnected");
+                ws = null;
+                reconnectAttempts = maxReconnectAttempts; // Prevent reconnection
+            }
+        }
+    </script>
+</body>
+</html> 

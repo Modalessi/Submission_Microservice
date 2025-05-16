@@ -5,6 +5,7 @@ class SubmissionStatus(Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    ERROR = "error"
 
 
 class SubmissionResult(Enum):
