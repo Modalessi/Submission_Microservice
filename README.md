@@ -92,13 +92,18 @@ This lightweight backend service supports a coding platform by:
 ### Environment Variables
 Create a `.env` file with the following:
 ```
-DB_URL=postgresql://user:password@postgres:5432/submissions
-REDIS_URL=redis
-RATE_LIMIT=5
-TIME_WINDOW=60
-JWT_SECRET=your-secret-key
-JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_PORT=
+DB_NAME=
+redis_url=r
+rate_limit=
+time_window=
+# JWT settings
+jwt_secret=
+jwt_algorithm=
+jwt_access_token_expire_minutes=
 ```
 
 ### Running with Docker
@@ -106,14 +111,28 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 docker-compose up -d
 ```
 
-### Running for Development
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+### Technical Decisions
 
-## Future Improvements
-- Add comprehensive test suite
-- Implement more advanced code evaluation strategies
-- Add pagination for submission listings
-- Enhance error handling and validation
+This app architecture is thin, there is not much abstraction.  
+For simplicity and flexibility.
+
+All the routes are in `main.py`, normally I would split these routes into their own files and use `APIRouter()`, and join them in the main.
+
+But there are few routes here, so I decided putting them all in the main is okay.
+
+##### Services  
+All the things this backend can do, and accessed by the routes directly.
+
+I don’t like using service classes and so on, I think of them as an unnecessary layer of abstraction.
+
+But in a big project I will split them using entities and make each entity have its own routes, models, and services.
+
+This makes it much simpler imo.
+
+##### Auth  
+I used straightforward JWT auth, not what you want to use in production. But for the sake of this project I went with it.
+
+##### DB  
+I used Postgres and SQLModel as the ORM. Normally I would use SQLAlchemy, but decided why not try this one — especially since it’s from the creator of FastAPI himself.
+
+And used Alembic for DB migrations.
