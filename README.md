@@ -1,4 +1,4 @@
-# KP TASK (Submission Microservice)
+# Submission Microservice
 
 This is a Submission Microservice for a "Backend Take-Home Task" that provides a REST API for handling code submissions, evaluations, and retrieving results.
 
@@ -34,13 +34,13 @@ This lightweight backend service supports a coding platform by:
    - Returns submission details:
   ```json
   {
-        "user_id": uuid.UUID,
-        "problem_id": uuid.UUID,
-        "language": str,
-        "source_code": str,
-        "status": SubmissionStatus,
-        "result": SubmissionResult | None,
-        "execution_time": int | None
+        "user_id": "str",
+        "problem_id": "str",
+        "language": "str",
+        "source_code": "str",
+        "status": "str",
+        "result": "str",
+        "execution_time": 0
     }
   ```
 
